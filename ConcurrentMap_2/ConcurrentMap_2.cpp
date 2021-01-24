@@ -25,25 +25,59 @@ class ConcurrentMap {
 public:
     using MapType = unordered_map<K, V, Hash>;
 
+    struct Bucket {
+        MapType data;
+        mutable mutex m;
+    };
+
     struct WriteAccess {
+        lock_guard<mutex> guard;
         V& ref_to_value;
+        WriteAccess(Bucket& bucket, const K& key)
+            : guard(bucket.m)
+            , ref_to_value(bucket.data[key])
+        {}
     };
 
     struct ReadAccess {
+        lock_guard<mutex> guard;
         const V& ref_to_value;
+        ReadAccess(const Bucket& bucket, const K& key)
+            : guard(bucket.m)
+            , ref_to_value(bucket.data.at(key))
+        {}
     };
 
-    explicit ConcurrentMap(size_t bucket_count);
+    explicit ConcurrentMap(size_t bucket_count)
+        : _buckets(bucket_count)
+    {}
 
-    WriteAccess operator[](const K& key);
-    ReadAccess At(const K& key) const;
+    WriteAccess operator[](const K& key) {
+        auto& bucket = _buckets[_hasher(key) % _buckets.size()];
+        return WriteAccess(bucket, key);
+    }
+    ReadAccess At(const K& key) const {
+        const auto& bucket = _buckets[_hasher(key) % _buckets.size()];
+        return ReadAccess(bucket, key);
+    }
 
-    bool Has(const K& key) const;
+    bool Has(const K& key) const {
+        const auto& bucket = _buckets[_hasher(key) % _buckets.size()];
+        return bucket.data.count(key) == 1;
+    }
 
-    MapType BuildOrdinaryMap() const;
+    MapType BuildOrdinaryMap() const {
+        MapType ordinary_map;
+        for (auto& bucket : _buckets) {
+            lock_guard(bucket.m);
+            ordinary_map.insert(bucket.data.begin(), bucket.data.end());
+        }
+        return ordinary_map;
+    }
 
 private:
-    Hash hasher;
+    Hash _hasher;
+    vector<Bucket> _buckets;
 };
 
 void RunConcurrentUpdates(
