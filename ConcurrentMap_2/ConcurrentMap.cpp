@@ -1,4 +1,4 @@
-﻿// ConcurrentMap_2.cpp : https://www.coursera.org/ C++ Development Fundamentals: Brown Belt, Week 3.
+// ConcurrentMap_2.cpp : https://www.coursera.org/ C++ Development Fundamentals: Brown Belt, Week 3.
 // Task: inside the class, use an unordered container instead of std::map
 //       need to support arbitrary keys, not just integer keys
 //       need to add constant methods Hasand At
@@ -281,7 +281,7 @@ void TestConcurrentHas() {
 
     get_future.get();
     fill_future.get();
-    cerr << count << "\n"; // выводим, чтобы компилятор не оптимизировал вызовы Has()
+    cerr << count << "\n"; // ???????, ????? ?????????? ?? ????????????? ?????? Has()
 }
 
 int main() {
